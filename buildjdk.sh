@@ -57,23 +57,36 @@ ln -s -f $CUPS_DIR/cups $ANDROID_INCLUDE/
 
 #FREEMARKER=$PWD/freemarker-2.3.8/lib/freemarker.jar
 
+apply_patch_or_die() {
+  local patch_path="$1"
+  local patch_name="$2"
+
+  echo "Applying ${patch_name}"
+  if ! git apply --check --whitespace=fix "$patch_path"; then
+    echo "Failed to apply ${patch_name}: ${patch_path}"
+    return 1
+  fi
+
+  git apply --whitespace=fix "$patch_path"
+}
+
 cd openjdk
 
 # Apply patches
 git reset --hard
 if [[ "$BUILD_IOS" != "1" ]]; then
-  git apply --reject --whitespace=fix ../patches/jdk8u_android.diff || echo "git apply failed (universal patch set)"
+  apply_patch_or_die ../patches/jdk8u_android.diff "Android universal patch set"
   if [[ "$TARGET_JDK" != "aarch32" ]]; then
-    git apply --reject --whitespace=fix ../patches/jdk8u_android_main.diff || echo "git apply failed (main non-universal patch set)"
+    apply_patch_or_die ../patches/jdk8u_android_main.diff "Android main non-universal patch set"
   else
-    git apply --reject --whitespace=fix ../patches/jdk8u_android_aarch32.diff || echo "git apply failed (aarch32 non-universal patch set)"
+    apply_patch_or_die ../patches/jdk8u_android_aarch32.diff "Android aarch32 non-universal patch set"
   fi
   if [[ "$TARGET_JDK" == "x86" ]]; then
-    git apply --reject --whitespace=fix ../patches/jdk8u_android_page_trap_fix.diff || echo "git apply failed (x86 page trap fix)"
+    apply_patch_or_die ../patches/jdk8u_android_page_trap_fix.diff "Android x86 page trap fix"
   fi
 else
-  git apply --reject --whitespace=fix ../patches/jdk8u_ios.diff || echo "git apply failed (ios patch set)"
-  git apply --reject --whitespace=fix ../patches/jdk8u_ios_fix_clang.diff || echo "git apply failed (ios clang fix patch set)"
+  apply_patch_or_die ../patches/jdk8u_ios.diff "iOS patch set"
+  apply_patch_or_die ../patches/jdk8u_ios_fix_clang.diff "iOS clang fix patch set"
 fi
 
 #   --with-extra-cxxflags="$CXXFLAGS -Dchar16_t=uint16_t -Dchar32_t=uint32_t" \
